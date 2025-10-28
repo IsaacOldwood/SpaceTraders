@@ -63,6 +63,7 @@ class Ship:
         return r.json()
 
     def auto_mine(self, keep_list: list[str], max_mines: int = 3):
+        summary = {}
         mine_info = None
 
         for mine_no in range(0, max_mines + 1):
@@ -79,9 +80,13 @@ class Ship:
                 check_cargo = False
             else:
                 print(f"Mined {mine_units}x {mine_symbol}")
+                if mine_symbol in summary:
+                    summary[mine_symbol] += mine_units
+                else:
+                    summary[mine_symbol] = mine_units
 
             if mine_no == max_mines:
-                return mine_info
+                break
 
             if (
                 check_cargo
@@ -89,14 +94,20 @@ class Ship:
                 == mine_info["data"]["cargo"]["units"]
             ):
                 print("Cargo full, stopping auto-mine")
-                return mine_info
+                break
 
             cooldown = mine_info["data"]["cooldown"]["remainingSeconds"]
             for i in range(cooldown, 0, -1):
                 if i == 1:
-                    print("\rCooldown complete          ")
+                    print("\rAuto Mine| Cooldown complete         ")
                 else:
-                    print(f"\rWaiting {i}s for cooldown ", sep="", end="", flush=True)
+                    print(
+                        f"\rAuto Mine| Waiting {i}s for cooldown ",
+                        sep="",
+                        end="",
+                        flush=True,
+                    )
                 sleep(1.05)
 
-        return mine_info
+        print("Auto Mine Summary:\n", summary)
+        return summary

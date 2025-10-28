@@ -138,9 +138,9 @@ def main():
     # output = main_ship.navigate(asteroid_symbol)
 
     contract_waypoint_keep_list = ["ALUMINUM_ORE", "IRON_ORE", "COPPER_ORE"]
-    output = main_ship.auto_mine(contract_waypoint_keep_list, 10)
+    main_ship.auto_mine(contract_waypoint_keep_list, 10)
 
-    print(json.dumps(output, indent=2))
+    # print(json.dumps(output, indent=2))
 
 
 if __name__ == "__main__":
