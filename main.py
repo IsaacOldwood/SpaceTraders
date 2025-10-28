@@ -1,7 +1,7 @@
 import requests
 from decouple import config
 import json
-from time import sleep
+from src.ship import Ship
 
 
 class Game:
@@ -69,26 +69,6 @@ class Game:
         r = requests.post(url, headers=self.headers)
         return r.json()
 
-    def orbit_ship(self, ship_id):
-        url = f"https://api.spacetraders.io/v2/my/ships/{ship_id}/orbit"
-        r = requests.post(url, headers=self.headers)
-        return r.json()
-
-    def dock_ship(self, ship_id):
-        url = f"https://api.spacetraders.io/v2/my/ships/{ship_id}/dock"
-        r = requests.post(url, headers=self.headers)
-        return r.json()
-
-    def refuel_ship(self, ship_id):
-        url = f"https://api.spacetraders.io/v2/my/ships/{ship_id}/refuel"
-        r = requests.post(url, headers=self.headers)
-        return r.json()
-
-    def mine(self, ship_id):
-        url = f"https://api.spacetraders.io/v2/my/ships/{ship_id}/extract"
-        r = requests.post(url, headers=self.headers)
-        return r.json()
-
     def list_shipyard(self, waypoint: str):
         system = waypoint.split("-")[0] + "-" + waypoint.split("-")[1]
         url = f"https://api.spacetraders.io/v2/systems/{system}/waypoints/{waypoint}/shipyard"
@@ -101,79 +81,6 @@ class Game:
         r = requests.post(url, headers=self.headers, json=payload)
         return r.json()
 
-    def navigate(self, waypoint, ship_id):
-        url = f"https://api.spacetraders.io/v2/my/ships/{ship_id}/navigate"
-        payload = {"waypointSymbol": waypoint}
-        r = requests.post(url, headers=self.headers, json=payload)
-        return r.json()
-
-    def sell(self, ship_id, item_id, units: int):
-        url = f"https://api.spacetraders.io/v2/my/ships/{ship_id}/sell"
-        payload = {"symbol": item_id, "units": units}
-        r = requests.post(url, headers=self.headers, json=payload)
-        return r.json()
-
-    def jettison_cargo(self, ship_id, item_id, units: int):
-        url = f"https://api.spacetraders.io/v2/my/ships/{ship_id}/jettison"
-        payload = {"symbol": item_id, "units": units}
-        r = requests.post(url, headers=self.headers, json=payload)
-        return r.json()
-
-    def contract_deliver(self, contract_id, ship_id, item_id, units: int):
-        url = f"https://api.spacetraders.io/v2/my/contracts/{contract_id}/deliver"
-        payload = {"shipSymbol": ship_id, "tradeSymbol": item_id, "units": units}
-        r = requests.post(url, headers=self.headers, json=payload)
-        return r.json()
-
-    def list_ship_cargo(self, ship_id):
-        url = f"https://api.spacetraders.io/v2/my/ships/{ship_id}/cargo"
-        r = requests.get(url, headers=self.headers)
-        return r.json()
-
-    def dock_fuel_orbit(self, ship_id):
-        self.dock_ship(ship_id)
-        self.refuel_ship(ship_id)
-        return self.orbit_ship(ship_id)
-
-    def auto_mine(self, ship_id, keep_list: list[str], max_mines: int = 3):
-        mine_info = None
-
-        for mine_no in range(0, max_mines + 1):
-            mine_info = self.mine(ship_id)
-
-            check_cargo = True
-            mine_yield = mine_info["data"]["extraction"]["yield"]
-            mine_symbol = mine_yield["symbol"]
-            mine_units = mine_yield["units"]
-            if mine_symbol not in keep_list:
-                print(f"Mined {mine_symbol}, not in keep list, jettisoning...")
-                self.jettison_cargo(ship_id, mine_symbol, mine_units)
-                sleep(1)
-                check_cargo = False
-            else:
-                print(f"Mined {mine_units}x {mine_symbol}")
-
-            if mine_no == max_mines:
-                return mine_info
-
-            if (
-                check_cargo
-                and mine_info["data"]["cargo"]["capacity"]
-                == mine_info["data"]["cargo"]["units"]
-            ):
-                print("Cargo full, stopping auto-mine")
-                return mine_info
-
-            cooldown = mine_info["data"]["cooldown"]["remainingSeconds"]
-            for i in range(cooldown, 0, -1):
-                if i == 1:
-                    print("\rCooldown complete          ")
-                else:
-                    print(f"\rWaiting {i}s for cooldown ", sep="", end="", flush=True)
-                sleep(1.05)
-
-        return mine_info
-
 
 def main():
     game = Game(config("API_KEY"))
@@ -181,6 +88,7 @@ def main():
     # output = game.my_agent()
     # output = game.list_ships()
     main_ship_id = "MOONFLASK-1"
+    main_ship = Ship(main_ship_id, config("API_KEY"))
     hq = "X1-TK43-A1"
 
     # output = game.list_contracts()
@@ -216,15 +124,21 @@ def main():
     # output = game.waypoint_market_info(contract_waypoint)
     # contract import: ALUMINUM_ORE, IRON_ORE, COPPER_ORE
 
-    # output = game.sell(mine_drone_id, "IRON_ORE", 2)
-    # output = game.jettison_cargo(mine_drone_id, "QUARTZ_SAND", 2)
-    # output = game.contract_deliver(con_id, mine_drone_id, "COPPER_ORE", 5)
+    # main_ship.navigate(contract_waypoint)
+
+    # main_ship.dock()
+    # main_ship.refuel()
+    # output = main_ship.list_cargo()
+
+    # main_ship.sell_cargo("IRON_ORE", 21)
+    # main_ship.sell_cargo("ALUMINUM_ORE", 11)
+    # output = main_ship.contract_deliver(con_id, "COPPER_ORE", 5)
+
+    # main_ship.orbit()
+    # output = main_ship.navigate(asteroid_symbol)
 
     contract_waypoint_keep_list = ["ALUMINUM_ORE", "IRON_ORE", "COPPER_ORE"]
-    output = game.auto_mine(main_ship_id, contract_waypoint_keep_list)
-
-    # output = game.ship_nav_info(main_ship_id)
-    # output = game.dock_fuel_orbit(main_ship_id)
+    output = main_ship.auto_mine(contract_waypoint_keep_list, 10)
 
     print(json.dumps(output, indent=2))
 
