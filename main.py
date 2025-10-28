@@ -135,20 +135,26 @@ class Game:
         self.refuel_ship(ship_id)
         return self.orbit_ship(ship_id)
 
-    def auto_mine(self, ship_id, keep_list: list[str]):
+    def auto_mine(self, ship_id, keep_list: list[str], max_mines: int = 3):
         mine_info = None
 
-        for _ in range(0, 3):
+        for mine_no in range(0, max_mines + 1):
             mine_info = self.mine(ship_id)
 
             check_cargo = True
             mine_yield = mine_info["data"]["extraction"]["yield"]
-            if mine_yield["symbol"] not in keep_list:
-                mine_symbol = mine_yield["symbol"]
+            mine_symbol = mine_yield["symbol"]
+            mine_units = mine_yield["units"]
+            if mine_symbol not in keep_list:
                 print(f"Mined {mine_symbol}, not in keep list, jettisoning...")
-                self.jettison_cargo(ship_id, mine_symbol, mine_yield["units"])
+                self.jettison_cargo(ship_id, mine_symbol, mine_units)
                 sleep(1)
                 check_cargo = False
+            else:
+                print(f"Mined {mine_units}x {mine_symbol}")
+
+            if mine_no == max_mines:
+                return mine_info
 
             if (
                 check_cargo
@@ -160,11 +166,12 @@ class Game:
 
             cooldown = mine_info["data"]["cooldown"]["remainingSeconds"]
             for i in range(cooldown, 0, -1):
-                if i == 0:
-                    print("Cooldown complete")
+                if i == 1:
+                    print("\rCooldown complete          ")
                 else:
-                    print(f"\rWaiting {i}s for cooldown", sep="", end="", flush=True)
+                    print(f"\rWaiting {i}s for cooldown ", sep="", end="", flush=True)
                 sleep(1.05)
+
         return mine_info
 
 
